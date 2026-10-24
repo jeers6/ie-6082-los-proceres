@@ -1,8 +1,88 @@
 // I.E. 6082 Los Próceres - Arquitectura por Roles
-// Calculadora Vigésima Mejorada + Animaciones
+// Calculadora Vigésima Dinámica + Animaciones + PrócerCoins
+
+// Calculadora Dinámica
+function agregarEvaluacion() {
+    const container = document.getElementById('evaluacionesContainer');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'eval-row';
+    div.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.8rem; align-items: center;';
+    div.innerHTML = `
+        <input type="text" class="eval-nombre" placeholder="Nombre de evaluación" style="padding: 0.7rem; border-radius: var(--radius-md); border: 2px solid var(--border-color);">
+        <input type="number" class="eval-peso" placeholder="Peso (%)" min="0" max="100" style="padding: 0.7rem; border-radius: var(--radius-md); border: 2px solid var(--border-color);">
+        <input type="number" class="eval-nota" placeholder="Nota (0-20)" min="0" max="20" step="0.5" style="padding: 0.7rem; border-radius: var(--radius-md); border: 2px solid var(--border-color);">
+        <button onclick="this.parentElement.remove(); calcularDinamico();" style="padding: 0.7rem; background: rgba(192,57,43,0.1); color: var(--rojo-institucional); border: none; border-radius: var(--radius-md); cursor: pointer;">✕</button>
+    `;
+    container.appendChild(div);
+    div.querySelectorAll('.eval-peso, .eval-nota').forEach(inp => {
+        inp.addEventListener('input', calcularDinamico);
+    });
+}
+
+function calcularDinamico() {
+    const nombres = document.querySelectorAll('.eval-nombre');
+    const pesos = document.querySelectorAll('.eval-peso');
+    const notas = document.querySelectorAll('.eval-nota');
+    const promedioEl = document.getElementById('promedioPonderado');
+    const textoEl = document.getElementById('textoResultadoDinamico');
+    const avisoEl = document.getElementById('avisoProcerCoins');
+    
+    if (!promedioEl) return;
+    
+    let sumaPesos = 0;
+    let sumaPonderada = 0;
+    let tieneNotas = false;
+    
+    for (let i = 0; i < pesos.length; i++) {
+        const peso = parseFloat(pesos[i].value) || 0;
+        const nota = parseFloat(notas[i].value);
+        if (!isNaN(nota) && nota >= 0 && nota <= 20 && peso > 0) {
+            sumaPesos += peso;
+            sumaPonderada += nota * peso;
+            tieneNotas = true;
+        }
+    }
+    
+    if (!tieneNotas || sumaPesos === 0) {
+        promedioEl.textContent = '0.0';
+        if (textoEl) textoEl.textContent = 'Ingresa las notas para calcular';
+        if (avisoEl) avisoEl.style.display = 'none';
+        return;
+    }
+    
+    const promedio = sumaPonderada / sumaPesos;
+    promedioEl.textContent = promedio.toFixed(2);
+    
+    if (promedio >= 10.5) {
+        if (textoEl) textoEl.textContent = '¡Felicitaciones! Promedio aprobatorio: ' + promedio.toFixed(2) + ' / 20';
+        if (avisoEl) avisoEl.style.display = 'none';
+    } else {
+        const faltante = 10.5 - promedio;
+        const pesoRestante = Math.max(0, 100 - sumaPesos);
+        if (pesoRestante > 0) {
+            const notaNecesaria = (10.5 * 100 - sumaPonderada) / pesoRestante;
+            if (textoEl) textoEl.textContent = 'Necesitas ' + notaNecesaria.toFixed(2) + ' en evaluaciones restantes para alcanzar 10.5';
+            if (notaNecesaria > 20 && avisoEl) {
+                avisoEl.style.display = 'block';
+            } else if (avisoEl) {
+                avisoEl.style.display = 'none';
+            }
+        } else {
+            if (textoEl) textoEl.textContent = 'Promedio: ' + promedio.toFixed(2) + ' - No alcanzas el promedio aprobatorio (10.5)';
+            if (promedio < 10.5 && avisoEl) avisoEl.style.display = 'block';
+        }
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Calculadora de Notas Vigésima
+    // Inicializar calculadora dinámica
+    document.querySelectorAll('.eval-peso, .eval-nota').forEach(inp => {
+        inp.addEventListener('input', calcularDinamico);
+    });
+    calcularDinamico();
+    
+    // Calculadora de Notas Vigésima (legacy)
     const calcParcial = document.getElementById('notaParcial');
     const calcPracticas = document.getElementById('notaPracticas');
     const calcFinal = document.getElementById('notaFinalMinima');

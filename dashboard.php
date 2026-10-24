@@ -166,14 +166,53 @@ try {
                 <?php elseif ($rol === 'estudiante'): ?>
                 <section id="bolso" class="bolso-widget">
                     <div class="bolso-resumen">
-                        <div class="bolso-icono">🎒</div>
+                        <div class="bolso-icono">💰</div>
                         <div>
-                            <span class="bolso-label">Bolso de Puntos Acumulados</span>
-                            <span class="bolso-saldo" id="bolsoSaldo" data-saldo="<?php echo $bolso_puntos; ?>"><?php echo $bolso_puntos; ?></span>
-                            <span class="bolso-sub">puntos académicos disponibles · gana más en el Árbol de Habilidades de cada curso</span>
+                            <span class="bolso-label">PrócerCoins (PC) Acumulados</span>
+                            <span class="bolso-saldo" id="bolsoSaldo" data-saldo="<?php echo $bolso_puntos; ?>"><?php echo $bolso_puntos; ?> PC</span>
+                            <span class="bolso-sub">Gana +2 PC con la Trivia Diaria o +1 PC por punto en el Árbol de Habilidades · 5 PC = +1 punto en examen</span>
                         </div>
                     </div>
-                    <form id="formBolso" class="bolso-form">
+
+                    <!-- Tienda de Recompensas -->
+                    <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(11,60,93,0.05)); border-radius: var(--radius-lg); border: 2px solid rgba(212,175,55,0.4);">
+                        <h3 style="color: var(--azul-marino); font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            🛍️ Tienda de Recompensas para Alumnos Destacados
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div style="padding: 1rem; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                                <div style="font-weight: 700; color: var(--azul-marino);">Insignia Mente Maestra (Marco Dorado)</div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem; margin: 0.3rem 0;">12 PC</div>
+                                <button class="btn btn-institutional" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="comprarRecompensa('insignia_maestra', 12)">Comprar</button>
+                            </div>
+                            <div style="padding: 1rem; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                                <div style="font-weight: 700; color: var(--azul-marino);">Certificado Digital de Honor</div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem; margin: 0.3rem 0;">20 PC</div>
+                                <button class="btn btn-institutional" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="comprarRecompensa('certificado_honor', 20)">Comprar</button>
+                            </div>
+                            <div style="padding: 1rem; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                                <div style="font-weight: 700; color: var(--azul-marino);">Pase de Extensión de Entrega (+24h)</div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem; margin: 0.3rem 0;">8 PC</div>
+                                <button class="btn btn-institutional" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="comprarRecompensa('pase_extension', 8)">Comprar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canjear PC por puntos -->
+                    <div style="margin-top: 1rem; padding: 1.5rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+                        <h3 style="color: var(--azul-marino); font-weight: 700; margin-bottom: 0.8rem;">Canjear PrócerCoins por Puntos de Examen</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">5 PrócerCoins (PC) = +1 Punto en Examen</p>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: end;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-weight: 600;">Cantidad de PC a canjear</label>
+                                <input type="number" id="canjearPC" min="5" step="5" placeholder="Múltiplo de 5" style="padding: 0.7rem; border-radius: var(--radius-md); border: 2px solid var(--border-color);">
+                            </div>
+                            <button class="btn btn-institutional" onclick="canjearPC()">Canjear PC → Puntos de Examen</button>
+                        </div>
+                        <div id="canjeMsg" class="bolso-msg" style="margin-top: 0.8rem;"></div>
+                    </div>
+
+                    <form id="formBolso" class="bolso-form" style="margin-top: 1rem;">
                         <div>
                             <label for="bolsoCurso">Curso</label>
                             <select id="bolsoCurso" required>
@@ -194,11 +233,11 @@ try {
                             <input type="number" id="bolsoNota" min="0" max="20" step="0.5" required>
                         </div>
                         <div>
-                            <label for="bolsoPuntos">Puntos a aplicar</label>
+                            <label for="bolsoPuntos">PrócerCoins a aplicar</label>
                             <input type="number" id="bolsoPuntos" min="1" step="1" required>
                         </div>
                         <div class="bolso-preview" id="bolsoPreview"></div>
-                        <button type="submit" class="btn btn-institutional" <?php echo $bolso_puntos < 1 ? 'disabled' : ''; ?>>Solicitar aplicar puntos</button>
+                        <button type="submit" class="btn btn-institutional" <?php echo $bolso_puntos < 1 ? 'disabled' : ''; ?>>Solicitar aplicar PrócerCoins</button>
                     </form>
                     <div id="bolsoMsg" class="bolso-msg"></div>
                     <?php if ($mis_solicitudes): ?>
@@ -369,8 +408,31 @@ try {
             { pregunta: "¿Planeta más grande del sistema solar?", opciones: ["Marte", "Júpiter", "Saturno"], correcta: 1 }
         ];
         let preguntaActual = 0;
+        let triviaCompletadaHoy = false;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const res = await fetch('api_bolso.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({accion: 'trivia_estado'})
+                });
+                const data = await res.json();
+                if (data.ok && data.completada) {
+                    triviaCompletadaHoy = true;
+                    const cont = document.getElementById('triviaContainer');
+                    if (cont) {
+                        cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><h3 style="font-size: 1.5rem; font-weight: 700; color: var(--azul-marino);">✅ Trivia de hoy completada</h3><p style="color: var(--text-secondary); margin: 1rem 0;">Ya participaste en la trivia diaria. Vuelve mañana para ganar +2 PrócerCoins (PC).</p></div>';
+                    }
+                }
+            } catch(e) {}
+        });
         
         function iniciarTrivia() {
+            if (triviaCompletadaHoy) {
+                alert('Ya completaste la trivia de hoy. Vuelve mañana.');
+                return;
+            }
             preguntaActual = 0;
             mostrarPregunta();
         }
@@ -378,7 +440,7 @@ try {
         function mostrarPregunta() {
             const cont = document.getElementById('triviaContainer');
             if (preguntaActual >= preguntasTrivia.length) {
-                cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><h3 style="font-size: 1.8rem; font-weight: 800; color: var(--success-color);">¡Felicitaciones!</h3><p style="color: var(--text-secondary); margin: 1rem 0;">Completaste la trivia</p><p style="font-weight: 700; color: var(--azul-marino);">+10 XP Ganados</p><button class="btn btn-institutional" style="margin-top: 1.5rem;" onclick="iniciarTrivia()">Jugar de Nuevo</button></div>';
+                finalizarTrivia();
                 return;
             }
             const p = preguntasTrivia[preguntaActual];
@@ -390,15 +452,101 @@ try {
             cont.innerHTML = html;
         }
         
+        async function finalizarTrivia() {
+            const cont = document.getElementById('triviaContainer');
+            try {
+                const res = await fetch('api_bolso.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({accion: 'trivia_diaria'})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    triviaCompletadaHoy = true;
+                    cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><h3 style="font-size: 1.8rem; font-weight: 800; color: var(--success-color);">¡Felicitaciones!</h3><p style="color: var(--text-secondary); margin: 1rem 0;">Completaste la trivia diaria</p><p style="font-weight: 700; color: var(--azul-marino); font-size: 1.2rem;">+2 PrócerCoins (PC) Ganados</p><p style="margin-top: 0.5rem;">Saldo: ' + (data.saldo || '') + ' PC</p></div>';
+                } else if (data.completada) {
+                    triviaCompletadaHoy = true;
+                    cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><h3 style="font-size: 1.5rem; font-weight: 700; color: var(--azul-marino);">✅ Trivia de hoy completada</h3><p style="color: var(--text-secondary); margin: 1rem 0;">Vuelve mañana para ganar más PrócerCoins.</p></div>';
+                } else {
+                    cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><p style="color: var(--rojo-institucional);">' + data.error + '</p></div>';
+                }
+            } catch(e) {
+                cont.innerHTML = '<div style="padding: 2rem; text-align: center;"><p style="color: var(--rojo-institucional);">Error al procesar</p></div>';
+            }
+        }
+        
         function responder(sel) {
             const p = preguntasTrivia[preguntaActual];
             if (sel === p.correcta) {
-                alert('¡Correcto! +10 XP');
+                // Correcto, continuar
             } else {
                 alert('Incorrecto. La respuesta correcta era: ' + p.opciones[p.correcta]);
             }
             preguntaActual++;
-            setTimeout(mostrarPregunta, 500);
+            setTimeout(mostrarPregunta, 300);
+        }
+
+        async function comprarRecompensa(recompensa, costo) {
+            const saldo = parseInt(document.getElementById('bolsoSaldo').textContent) || 0;
+            if (saldo < costo) {
+                alert('No tienes suficientes PrócerCoins. Necesitas ' + costo + ' PC.');
+                return;
+            }
+            if (!confirm('¿Comprar esta recompensa por ' + costo + ' PrócerCoins?')) return;
+            try {
+                const res = await fetch('api_bolso.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({accion: 'comprar_recompensa', recompensa: recompensa})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert(data.mensaje);
+                    document.getElementById('bolsoSaldo').textContent = data.saldo + ' PC';
+                    document.getElementById('bolsoSaldo').dataset.saldo = data.saldo;
+                } else {
+                    alert(data.error);
+                }
+            } catch(e) {
+                alert('Error al comprar');
+            }
+        }
+
+        async function canjearPC() {
+            const pc = parseInt(document.getElementById('canjearPC').value);
+            const saldo = parseInt(document.getElementById('bolsoSaldo').dataset.saldo) || 0;
+            const msg = document.getElementById('canjeMsg');
+            if (!pc || pc < 5 || pc % 5 !== 0) {
+                msg.textContent = 'Debes canjear en múltiplos de 5 PrócerCoins';
+                msg.className = 'bolso-msg error';
+                return;
+            }
+            if (saldo < pc) {
+                msg.textContent = 'No tienes suficientes PrócerCoins';
+                msg.className = 'bolso-msg error';
+                return;
+            }
+            try {
+                const res = await fetch('api_bolso.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({accion: 'canjear_pc', pc: pc})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg.textContent = data.mensaje;
+                    msg.className = 'bolso-msg ok';
+                    document.getElementById('bolsoSaldo').textContent = data.saldo + ' PC';
+                    document.getElementById('bolsoSaldo').dataset.saldo = data.saldo;
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    msg.textContent = data.error;
+                    msg.className = 'bolso-msg error';
+                }
+            } catch(e) {
+                msg.textContent = 'Error al canjear';
+                msg.className = 'bolso-msg error';
+            }
         }
     </script>
 </body>

@@ -35,7 +35,110 @@ function bolso_log(PDO $pdo, int $uid, int $mov, string $motivo): int
     return $saldo;
 }
 
+function get_saldo(PDO $pdo, int $uid): int
+{
+    $s = $pdo->prepare("SELECT bolso_puntos FROM usuarios WHERE id = ?");
+    $s->execute([$uid]);
+    return (int)$s->fetchColumn();
+}
+
 try {
+    // ---------- Obtener saldo PrócerCoins ----------
+    if ($accion === 'saldo') {
+        out(['ok' => true, 'saldo' => get_saldo($pdo, $uid)]);
+    }
+
+    // ---------- Trivia diaria (1 vez por día) ----------
+    if ($accion === 'trivia_diaria') {
+        if ($rol !== 'estudiante') {
+            out(['ok' => false, 'error' => 'Solo los estudiantes pueden participar en la trivia.'], 403);
+        }
+        $hoy = date('Y-m-d');
+        // Verificar si ya participó hoy
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM bolso_historial WHERE id_estudiante = ? AND motivo LIKE ? AND DATE(fecha) = ?");
+        $chk->execute([$uid, '%Trivia diaria%', $hoy]);
+        if ((int)$chk->fetchColumn() > 0) {
+            out(['ok' => false, 'completada' => true, 'error' => 'Trivia de hoy completada. Vuelve mañana para ganar más PrócerCoins.']);
+        }
+        $pdo->beginTransaction();
+        $pdo->prepare("UPDATE usuarios SET bolso_puntos = bolso_puntos + 2 WHERE id = ?")->execute([$uid]);
+        $saldo = bolso_log($pdo, $uid, 2, 'Trivia diaria completada - +2 PrócerCoins (PC)');
+        $pdo->commit();
+        out(['ok' => true, 'mensaje' => '¡Correcto! Ganaste +2 PrócerCoins (PC).', 'saldo' => $saldo]);
+    }
+
+    // ---------- Verificar estado trivia diaria ----------
+    if ($accion === 'trivia_estado') {
+        if ($rol !== 'estudiante') {
+            out(['ok' => true, 'completada' => false]);
+        }
+        $hoy = date('Y-m-d');
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM bolso_historial WHERE id_estudiante = ? AND motivo LIKE ? AND DATE(fecha) = ?");
+        $chk->execute([$uid, '%Trivia diaria%', $hoy]);
+        out(['ok' => true, 'completada' => ((int)$chk->fetchColumn() > 0)]);
+    }
+
+    // ---------- Canjear PrócerCoins por puntos de examen (5 PC = +1 punto) ----------
+    if ($accion === 'canjear_pc') {
+        if ($rol !== 'estudiante') {
+            out(['ok' => false, 'error' => 'Solo los estudiantes pueden canjear PrócerCoins.'], 403);
+        }
+        $pc = (int)($in['pc'] ?? 0);
+        if ($pc < 5 || ($pc % 5) !== 0) {
+            out(['ok' => false, 'error' => 'Debes canjear en múltiplos de 5 PrócerCoins (5 PC = +1 punto en examen).'], 400);
+        }
+        $puntos_a_ganar = intdiv($pc, 5);
+        $pdo->beginTransaction();
+        $b = $pdo->prepare("SELECT bolso_puntos FROM usuarios WHERE id = ? FOR UPDATE");
+        $b->execute([$uid]);
+        $saldo_actual = (int)$b->fetchColumn();
+        if ($saldo_actual < $pc) {
+            $pdo->rollBack();
+            out(['ok' => false, 'error' => 'No tienes suficientes PrócerCoins.'], 400);
+        }
+        $pdo->prepare("UPDATE usuarios SET bolso_puntos = bolso_puntos - ? WHERE id = ?")->execute([$pc, $uid]);
+        $saldo = bolso_log($pdo, $uid, -$pc, "Canje de $pc PrócerCoins (PC) por $puntos_a_ganar punto(s) para examen");
+        // Crear solicitud genérica para aplicar puntos (se puede aprobar desde panel)
+        $pdo->prepare("INSERT INTO solicitudes_puntos (id_estudiante, id_curso, tipo_examen, nota_actual, puntos_aplicados, nota_resultante, estado)
+            VALUES (?, 1, 'parcial', 0, ?, 0, 'pendiente')")->execute([$uid, $puntos_a_ganar]);
+        $pdo->commit();
+        out(['ok' => true, 'mensaje' => "Canje exitoso: $pc PC → $puntos_a_ganar punto(s) en examen. Solicitud enviada.", 'saldo' => $saldo]);
+    }
+
+    // ---------- Comprar recompensa en tienda ----------
+    if ($accion === 'comprar_recompensa') {
+        if ($rol !== 'estudiante') {
+            out(['ok' => false, 'error' => 'Solo los estudiantes pueden comprar recompensas.'], 403);
+        }
+        $recompensa = $in['recompensa'] ?? '';
+        $costos = [
+            'insignia_maestra' => 12,
+            'certificado_honor' => 20,
+            'pase_extension' => 8
+        ];
+        if (!isset($costos[$recompensa])) {
+            out(['ok' => false, 'error' => 'Recompensa inválida.'], 400);
+        }
+        $costo = $costos[$recompensa];
+        $nombres = [
+            'insignia_maestra' => 'Insignia Mente Maestra (Marco Dorado)',
+            'certificado_honor' => 'Certificado Digital de Honor',
+            'pase_extension' => 'Pase de Extensión de Entrega (+24h)'
+        ];
+        $pdo->beginTransaction();
+        $b = $pdo->prepare("SELECT bolso_puntos FROM usuarios WHERE id = ? FOR UPDATE");
+        $b->execute([$uid]);
+        $saldo_actual = (int)$b->fetchColumn();
+        if ($saldo_actual < $costo) {
+            $pdo->rollBack();
+            out(['ok' => false, 'error' => 'No tienes suficientes PrócerCoins.'], 400);
+        }
+        $pdo->prepare("UPDATE usuarios SET bolso_puntos = bolso_puntos - ? WHERE id = ?")->execute([$costo, $uid]);
+        $saldo = bolso_log($pdo, $uid, -$costo, 'Compra: ' . $nombres[$recompensa]);
+        $pdo->commit();
+        out(['ok' => true, 'mensaje' => '¡Recompensa adquirida: ' . $nombres[$recompensa] . '!', 'saldo' => $saldo]);
+    }
+
     // ---------- Estudiante pide aplicar puntos a un examen ----------
     if ($accion === 'solicitar') {
         if ($rol !== 'estudiante') {
@@ -70,7 +173,7 @@ try {
         $b->execute([$uid]);
         if ((int)$b->fetchColumn() < $puntos) {
             $pdo->rollBack();
-            out(['ok' => false, 'error' => 'No tienes suficientes puntos en el Bolso.'], 400);
+            out(['ok' => false, 'error' => 'No tienes suficientes PrócerCoins.'], 400);
         }
         $d = $pdo->prepare("SELECT COUNT(*) FROM solicitudes_puntos WHERE id_estudiante = ? AND id_curso = ? AND tipo_examen = ? AND estado = 'pendiente'");
         $d->execute([$uid, $id_curso, $tipo]);
@@ -83,7 +186,7 @@ try {
         $resultante = min(20, $nota + $puntos);
         $pdo->prepare("INSERT INTO solicitudes_puntos (id_estudiante, id_curso, tipo_examen, nota_actual, puntos_aplicados, nota_resultante)
             VALUES (?, ?, ?, ?, ?, ?)")->execute([$uid, $id_curso, $tipo, $nota, $puntos, $resultante]);
-        $saldo = bolso_log($pdo, $uid, -$puntos, "Solicitud de $puntos punto(s) en examen $tipo");
+        $saldo = bolso_log($pdo, $uid, -$puntos, "Solicitud de $puntos PrócerCoin(s) en examen $tipo");
         $pdo->commit();
         out(['ok' => true, 'mensaje' => 'Solicitud enviada. Tu docente la revisará.', 'bolso' => $saldo]);
     }
