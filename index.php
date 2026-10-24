@@ -51,8 +51,8 @@
                         Brindamos una educación integral, inclusiva e innovadora, fundamentada en valores, disciplina
                         y compromiso con la excelencia académica.
                     </p>
-                    <div class="hero-actions">
-                        <a class="btn btn-primary" href="login.php">
+                    <div class="hero-actions" style="position: relative; z-index: 10;">
+                        <a class="btn btn-primary" href="login.php" style="cursor: pointer;">
                             <span>Ingresar al Campus Virtual</span>
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M3.75 9H14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
